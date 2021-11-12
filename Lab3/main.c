@@ -5,7 +5,7 @@
 #include <ctype.h>
 #define MAXLENGTH 400
 int check_status(char* line, FILE* file_out, char* status);
-int get_timeshift(FILE* file_in, int timeshift);
+void get_timeshift(FILE* file_in, long timeshift);
 long parse_time(char* line);
 void command_handler(char* argv[], FILE* file_in, FILE* file_out);
 
@@ -99,8 +99,7 @@ int check_status(char* line, FILE* file_out, char* status) {
 
 }
 
-int get_timeshift(FILE* file_in, int timeshift) {
-    printf("%d", sizeof(long long));
+void get_timeshift(FILE* file_in, long timeshift) {
     char* line;
     line = calloc(MAXLENGTH, sizeof(char));
     long line_time;
@@ -108,13 +107,15 @@ int get_timeshift(FILE* file_in, int timeshift) {
     times_queue = malloc(2000000*sizeof(long));
     int head = 0;
     int tail = -1;
-    time_t max_head = 0;
-    time_t max_tail = 0;
+    time_t* max_head;
+    max_head = malloc(sizeof(time_t));
+    time_t* max_tail;
+    max_tail = malloc(sizeof(time_t));
     long curr_time = timeshift;
     long delta;
     int max_requests = 0;
     int counter = 0;
-    long tmp = 804539816;
+
     while (!feof(file_in)) {
         counter += 1;
         fgets(line, MAXLENGTH, file_in);
@@ -142,8 +143,8 @@ int get_timeshift(FILE* file_in, int timeshift) {
             if ((tail - head + 1) > max_requests) {
 
                 max_requests = tail - head + 1;
-                max_head = times_queue[head];
-                max_tail = times_queue[tail];
+                *max_head = (time_t)times_queue[head];
+                *max_tail = (time_t)times_queue[tail];
 
             }
 
@@ -171,9 +172,15 @@ int get_timeshift(FILE* file_in, int timeshift) {
         }
     
     }
-
-    printf("The max number of requests is %ld, starting from %s ending with %s\n", max_requests, ctime(&max_head), ctime(&max_tail));
+    // printf("%lu   %lu\n", ctime(max_head), ctime(max_tail));
+    // char* window_start = malloc(32*sizeof(char));
+    // window_start = ctime(max_head);
+    // printf("%ld, %ld\n", *max_head, *max_tail);
+    printf("The max number of requests is %ld, starting from %s\r", max_requests, ctime(max_head));
+    printf("ending with %s\n", ctime(max_tail));
     free(times_queue);
+    free(max_tail);
+    free(max_head);
     
     }
 
@@ -200,19 +207,13 @@ long parse_time(char* line) {
     }
     string[2] = '\0';
     time->tm_sec = atoi(string);
-    // printf("request is: %s      this is time %d:%d:%d\n",line, time.tm_hour, time.tm_min, time.tm_sec);
-    // printf("%s  ", ctime(mktime(&time)));
-    // printf("%ld %ld %ld %ld %ld %ld\n", time->tm_year, time->tm_mon, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec);
-    time_t result = mktime(time);
-    // long* result = mktime(time);
-    // printf("%s\n", ctime(result));
     return mktime(time);
 
 }
 
 void command_handler(char* argv[], FILE* file_in, FILE* file_out) {
     char* status;
-    int timeshift;
+    long timeshift;
     int counter = 0;
     int max_requests;
     if (strcmp(argv[1], "--help") == 0) {
@@ -233,14 +234,13 @@ void command_handler(char* argv[], FILE* file_in, FILE* file_out) {
         }
         fprintf(file_out, "The number of rquests with status code %s** is %d\n", status, counter);
         
-
-
     }
      
     if (strcmp(argv[1], "--timeshift") == 0) {
 
         timeshift = atoi(argv[2]);
-        max_requests = get_timeshift(file_in, timeshift);
+        get_timeshift(file_in, timeshift);
+
     }
     
 }
