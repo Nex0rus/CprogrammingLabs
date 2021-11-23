@@ -32,7 +32,7 @@ int check_status(char* line, FILE* file_out, char* status) {
     while (pch != NULL) {
 
         tmp = pch;
-        pch = strtok(NULL, "\"");
+        pch = strtok(NULL, "\""); // после второго разделения строки по " получим запрос
         if (counter == 1) {
             request = pch;
             counter++;
@@ -44,7 +44,7 @@ int check_status(char* line, FILE* file_out, char* status) {
 
     }
     for (int i = 1; i < 4; i++) {
-        result[i-1] = tmp[i]; 
+        result[i-1] = tmp[i]; // Копируем status code в временную переменную
     }
     result[3] = '\0';
 
@@ -101,7 +101,7 @@ int check_status(char* line, FILE* file_out, char* status) {
 
 void get_timeshift(FILE* file_in, long timeshift) {
     char* line;
-    line = calloc(MAXLENGTH, sizeof(char));
+    line = malloc(MAXLENGTH*sizeof(char));
     long line_time;
     long* times_queue;
     times_queue = malloc(2000000*sizeof(long));
@@ -114,10 +114,9 @@ void get_timeshift(FILE* file_in, long timeshift) {
     long curr_time = timeshift;
     long delta;
     int max_requests = 0;
-    int counter = 0;
 
     while (!feof(file_in)) {
-        counter += 1;
+
         fgets(line, MAXLENGTH, file_in);
         line_time = parse_time(line);
         if (tail == -1) {
@@ -154,6 +153,7 @@ void get_timeshift(FILE* file_in, long timeshift) {
                 head +=1;
 
             }
+
             if (delta > curr_time) {
                 
                 tail += 1;
@@ -162,6 +162,7 @@ void get_timeshift(FILE* file_in, long timeshift) {
                 head = tail;
 
             }
+
             else {
 
                 curr_time -= delta;
@@ -172,10 +173,7 @@ void get_timeshift(FILE* file_in, long timeshift) {
         }
     
     }
-    // printf("%lu   %lu\n", ctime(max_head), ctime(max_tail));
-    // char* window_start = malloc(32*sizeof(char));
-    // window_start = ctime(max_head);
-    // printf("%ld, %ld\n", *max_head, *max_tail);
+
     printf("The max number of requests is %ld, starting from %s\r", max_requests, ctime(max_head));
     printf("ending with %s\n", ctime(max_tail));
     free(times_queue);
@@ -186,7 +184,6 @@ void get_timeshift(FILE* file_in, long timeshift) {
 
 
 long parse_time(char* line) {
-    char string[3];
     struct tm* time;
     time = malloc(64);
     char* split;
@@ -202,28 +199,24 @@ long parse_time(char* line) {
     split = strtok(NULL, ":");
     time->tm_min = atoi(split);
     split = strtok(NULL, " ");
-    for (int i = 0; i < 2; i++) {
-        string[i] = split[i];
-    }
-    string[2] = '\0';
-    time->tm_sec = atoi(string);
+    time->tm_sec = atoi(split);
     return mktime(time);
 
 }
 
 void command_handler(char* argv[], FILE* file_in, FILE* file_out) {
     char* status;
+    char* line;
     long timeshift;
     int counter = 0;
     int max_requests;
+
     if (strcmp(argv[1], "--help") == 0) {
         printf("===========================\nThis is log parsing programm\nThe list of features:\n --help Shows available options\n --status X Creates a output file status_info.txt\n   with all requests of status code X** where X from 1 to 5\n --timeshift X Shows the maximum number of requests\n   that were made in X seconds\n===========================\n");
     }
 
     if (strcmp(argv[1], "--status") == 0) {
         status = argv[2];
-        printf("%s\n", status);
-        char* line;
         line = calloc(MAXLENGTH, sizeof(char));
 
         while (!feof(file_in)) {
@@ -232,6 +225,7 @@ void command_handler(char* argv[], FILE* file_in, FILE* file_out) {
             counter += check_status(line, file_out, status);
 
         }
+
         fprintf(file_out, "The number of rquests with status code %s** is %d\n", status, counter);
         
     }
