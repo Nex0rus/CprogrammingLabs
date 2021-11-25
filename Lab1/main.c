@@ -2,16 +2,14 @@
 #include <string.h>
 
 
-int collectline(FILE *file); //Функция чтения строки в массив символов из файла, возвращяет длину строки
+int collectline(FILE *file); //Функция чтения строки в массив символов из файла, возвращает длину строки
 
 int main(int argc, char *argv[]) {
 
-    int current_length; // Длина текущей прочитаной строки в символах
-//char line[MAXLENGTH];// Массив символов, куда будет записываться прочитанная строка
+    int current_length; // Длина текущей прочитанной строки в символах
     FILE *file = fopen(argv[2], "r");
 
-
-    if (argc != 3) { //Проверка случая несоответсвия количества параметров,
+    if (argc != 3) { //Проверка случая несоответсвия количества параметров
         printf("--------------------------------------------\n"
                "Invalid input format. The file name and options are passed through\n"
                "command line arguments in the following format:\n"
@@ -82,10 +80,8 @@ int collectline(FILE *file) { // читает строку и возвращае
     int i = 0;
     int symbol;
 
-    while ((symbol=fgetc(file))!=EOF && symbol !='\n') ++i; // Проходит посимвольно до \n
-    if (symbol == '\n') i+=2; // индекс i увеличивается на 2 а не на 1 т.к за каждым символом '\n' в системе Windows следует символ '\r' перевода каретки, который учитывается здесь в длину строки
+    while ((symbol=fgetc(file)) != EOF && symbol != '\n') ++i; // Проходит посимвольно до \n
+    if (symbol == '\n') i += 2; // индекс i увеличивается на 2 а не на 1 т.к за каждым символом '\n' в системе Windows следует символ '\r' перевода каретки, который учитывается здесь в длину строки
 
     return i;
 }
-
-
