@@ -344,10 +344,47 @@ Frame* parse_frame(FILE* mp3, int* counter, char* buf, Frame* frame) {
     return frame;
 }
 
-void set_value(FILE* mp3) {
+void set_value(FILE* mp3, char* tag, char* value) {
+    char* bits;
+    char is_ext_header = 0;
+    Frame* frame = malloc(sizeof(struct Frame));
+    int num_of_symbols = 0;
+    int size = 0;
+    int ext_size = 0;
+    FILE* mp3_out = fopen("temp.mp3", "w");
+    char* header = malloc(10*sizeof(char));
+    fread(header, sizeof(char), 10, mp3);
+    for (int i = 6; i < 10; i++) {
+        size += header[i]*pow(128, 9-i);
+    }
+    char* buf = malloc(size*sizeof(char));
+    bits = write_bits(bits, header[5]);
+    if (bits[1] == 1) {
+        is_ext_header = 1;
+    } 
 
+    if (is_ext_header) {
+
+        for (int i = 0; i < 10; i++) {
+            buf = fgetc(mp3);
+            buf++;
+        }
+        for (int i = 0; i < 4; i++) {
+            ext_size += buf[i]*pow(256, 3-i);
+        }
+        for (int i = 0; i < ext_size; i++) {
+            buf = fgetc(mp3);
+            buf++;
+        }
+        ext_size += 10;
+
+    }
+    size -= ext_size;
+    int count = 0;
+    for (int count; count < size; count++) {
+        
+    }
 }
-
 // FILE* get_pic(FILE* mp3, int* counter, char* buf, Frame* frame) {
 //     fread(buf, sizeof(char), 4, mp3);
 //     *counter += 4;
