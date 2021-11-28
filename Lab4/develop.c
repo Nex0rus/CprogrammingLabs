@@ -9,11 +9,22 @@
 
 
 typedef struct Frame {
-    char* name;
     int size;
     char* info;
     int num_of_symbols;
+
 }Frame;
+
+typedef struct Picture {
+    int size;
+    char encoding;
+    char* mime;
+    char* type;
+    char* data;
+    char* description;
+
+}Picture;
+
 
 void command_handler(int argc, char* argv[]);
 char* write_bits(char* bits, char byte);
@@ -25,6 +36,7 @@ Frame* parse_frame(FILE* mp3, int* counter, char* buf, Frame* frame);
 int skip_frame(FILE* mp3, int counter);
 void get_frame(FILE* mp3, char* tag);
 void set_value(FILE* mp3, char* file_path, char* tag, char* value);
+void get_pic(FILE* mp3, int* counter);
 
 
 int main(int argc, char* argv[]) {
@@ -32,10 +44,12 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+
 void raise_error() { // простая alert функция вызываемая в command_handler в случае несоответствия аргументов
     printf("Wrong parameters format\nPlease input valid parameters\nThe list of parameters:\n --filepath=\"filepath\" this is an esential parameter\n --show shows all meatinformation organised in a table\n --get=\"prop_name\" shows the value of a tag named prop_name\n --set=\"prop_name\" --value=\"value\" changes tag's named prop_name value to value parameter\n");
     exit(0);
 }
+
 
 void command_handler(int argc, char* argv[]) { // функция обработки командлет
     if (argc < 3) {
@@ -51,7 +65,7 @@ void command_handler(int argc, char* argv[]) { // функция обработ�
     strtok(argv[1], "=");
     file_path = strtok(NULL, "=");
     printf("====%s====\n", file_path);
-    if ((mp3 = fopen(file_path, "r")) == NULL) {
+    if ((mp3 = fopen(file_path, "rb")) == NULL) {
 
         printf("Failed to open the file. Check if the filepath is valid\n");
         exit(0);
@@ -251,6 +265,10 @@ void get_frame(FILE* mp3, char* tag) { // функция реализующая 
             return;
         }
 
+        else if (tagcmp(buf, "APIC")) {
+    
+        }
+
         else if (buf[0] != '\0') { // если получили неподдерживаемый фрейм - пропускаем его 
             counter = skip_frame(mp3, counter);
         }
@@ -330,6 +348,12 @@ void show(FILE* mp3) { // функция реализующая опцию --sho
 
         }
 
+        else if (tagcmp(buf, "APIC")) {
+            get_pic(mp3, &counter);
+            return;
+            
+        }
+
         else if (buf[0] != '\0') { // если встретилось значение не на 0, необходимо пропустить тэг, просто пролистав символы 
             counter = skip_frame(mp3, counter);
         }
@@ -397,7 +421,7 @@ void set_value(FILE* mp3, char* file_path, char* tag, char* value) { // функ
     char* tag_towrite_value;             // информация содержащаяся в value, необходимо записать на место фрейма
     int tag_towrite_size = 0;            // размер фрейма который будет записан на место замененного
     
-    FILE* mp3_out = fopen("temp.mp3", "w"); // открываем временный файл куда будет скопировано все из текущего за исключением заменяемого тэга
+    FILE* mp3_out = fopen("temp.mp3", "wb"); // открываем временный файл куда будет скопировано все из текущего за исключением заменяемого тэга
     if (tag[0] == 'T' || tag[0] == 'W' || tag[0] == 'C') { // проверяем что изменяются поддерживаемый программой тэги
         tag_towrite_size += (int)strlen(value) + 1; // считываем размер введенной строки из value
         tag_towrite_value = malloc((tag_towrite_size+10)*sizeof(char)); // зная что общий размер фрейма на 10 больше выделяем память под перменную с текстом фрейма
@@ -569,3 +593,108 @@ void set_value(FILE* mp3, char* file_path, char* tag, char* value) { // функ
     free(buf);
 }
 
+void get_pic(FILE* mp3, int* counter) {
+    Picture* pic;
+    char* buf = malloc(10*sizeof(char));
+    unsigned char* size_buf = malloc(4*sizeof(char));
+    fread(size_buf, sizeof(char), 4, mp3);
+    int size = 0;
+    int power = 1;
+    char byte = 1;
+    
+    for (int i = 0; i < 4; i++) {
+
+        power = pow(256, 3 - i);
+        size += size_buf[i]*power;
+        printf("%d\n", size);
+
+    }
+    printf(" 609 Prev size is %d\n", size);
+    
+    pic = malloc(size*sizeof(char) + sizeof(int) + 100);
+    pic->size = size;
+    fgetc(mp3);
+    fgetc(mp3);
+    printf("Position after header  %d\n", ftell(mp3));
+    pic->encoding = fgetc(mp3);
+    size -= 1;
+
+    // for (int i = 0; i < 6; i++) {
+    //     size -= 1;
+    // } 
+
+
+    int i = 0;
+    byte = 1;
+    buf[0] = 1;
+
+    while (byte != '\0') {
+
+        byte = fgetc(mp3);
+        buf[i] = byte;
+        size -= 1;
+        i++;
+
+    }
+    
+    pic->mime = buf;
+    pic->mime = strtok(pic->mime, "/");
+    pic->mime = strtok(NULL, "/");
+
+    fgetc(mp3);
+    size -= 1;
+    byte = 1;
+    i = 0;
+
+    
+    while (byte != '\0') {
+
+        byte = fgetc(mp3);
+        printf("Last byte is %d\n", byte);
+        size -= 1;
+        i++;
+
+    }
+
+    printf("Position before picture  %d\n", ftell(mp3));
+    printf("SIZE is %d\n", size);
+    char* image_path = calloc(10, sizeof(char));
+    strcat(image_path, "image.");
+    strcat(image_path, pic->mime);
+    FILE* pic_out = fopen(image_path, "wb");
+    if (pic_out != NULL) {
+        printf("Opened image\n");
+    }
+
+    char* data_buf = malloc(size*sizeof(char));
+    if (data_buf != NULL) {
+        printf("YES\n");
+    }
+    char code = 1;
+    for (int i = 0; i < size; i++) {
+        code = fgetc(mp3);
+        fputc(code, pic_out);
+    }
+    // fread(data_buf, sizeof(int), size, mp3);
+    // fwrite(data_buf, sizeof(char), size, pic_out);
+    // pic->data = data_buf;
+    // for (int i = 0; i < size; i++) {
+    //     printf("i is %d    %d \n", i, fgetc(mp3));
+    // }
+    // i = 0;
+    // while (i < size) {
+    //     printf("%d\n", (int)fgetc(mp3));
+    //     i++;
+    // }
+    // printf("%s\n", data_buf);
+    // for (int i = 0; i < size; i++) {
+    //     code = fgetc(mp3);
+    //     printf("%d ", code);
+    //     fputc(code, pic_out);
+    // }
+    fclose(pic_out);
+    *counter += pic->size + 10;
+ 
+    return;
+
+}
