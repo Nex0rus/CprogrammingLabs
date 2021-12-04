@@ -119,7 +119,7 @@ char* write_bits(char* bits, char byte) { // простая функция ра�
 
     for (int i = 0; i < 8; i++) {
 
-        bits[i] = (byte >>(sizeof(byte)*8 -i-1)) & 1;
+        bits[i] = (byte >> (sizeof(byte) * 8 - i - 1)) & 1;
 
     }
 
@@ -129,7 +129,7 @@ char* write_bits(char* bits, char byte) { // простая функция ра�
 
 int parse_ID3_header(FILE* mp3) { // функция парсинга ID3 header - возвращает контрольную сумму из размера и флага расширенного header 
     char byte;
-    char* bits = malloc(8*sizeof(char));
+    char* bits = malloc(8 * sizeof(char));
     int version = 0;
     int size = 0;
     char is_extended_header = 0;
@@ -178,12 +178,12 @@ int parse_ID3_header(FILE* mp3) { // функция парсинга ID3 header 
     }
 
     free(bits); // освобождает память
-    return size*10 + is_extended_header; // возращает контрольную сумму - размер*10 + флаг наличия расширенного заголовка - 1 или 0
+    return size * 10 + is_extended_header; // возращает контрольную сумму - размер * 10 + флаг наличия расширенного заголовка - 1 или 0
 
 }
 
 int skip_frame(FILE* mp3, int counter) { // функция пропуска фрейма до начала следующего 
-    char* buf = malloc(4*sizeof(char));
+    char* buf = malloc(4 * sizeof(char));
     int size;
     fread(buf, sizeof(char), 4, mp3); // считывает размер фрейма в буфер 
 
@@ -193,9 +193,10 @@ int skip_frame(FILE* mp3, int counter) { // функция пропуска фр
     counter += size + 6; // увеличивает значение переменной счетчика, которую затем вернет в вызывавшую функцию
     fgetc(mp3); // пропускаем два байта флагов
     fgetc(mp3);
-    for (int i = 0; i < size - 1; i++) { // пропускаем все поля структуры 
-        fgetc(mp3);
-    }
+    fread(buf, sizeof(char), size, mp3); // пропускаем все поля структуры 
+    // for (int i = 0; i < size - 1; i++) { 
+    //     fgetc(mp3);
+    // }
     free(buf); // освобождаем память 
     return counter;
     
@@ -349,6 +350,8 @@ void show(FILE* mp3) { // функция реализующая опцию --sho
         }
 
         else if (tagcmp(buf, "APIC")) {
+            printf("==================\n");
+            printf("%s\n", buf);
             get_pic(mp3, &counter);
             return;
             
@@ -544,6 +547,7 @@ void set_value(FILE* mp3, char* file_path, char* tag, char* value) { // функ
         {
             fputc(buf[i], mp3_out);
         }
+        
     }
 
     else // если же фрейм был найден его необходимо пропустить 
@@ -568,6 +572,7 @@ void set_value(FILE* mp3, char* file_path, char* tag, char* value) { // функ
         {
             fputc(buf[i], mp3_out);
         }
+    
     }
 
     long cur_pos = ftell(mp3); // узнаем текущую позицию курсора относительно начала файла - она должна быть на конце ID3 header'a
@@ -579,10 +584,12 @@ void set_value(FILE* mp3, char* file_path, char* tag, char* value) { // функ
     buf = realloc(buf, end_of_file - cur_pos + 1); // считаем это количество в буфер 
     fread(buf, sizeof(char), (end_of_file - cur_pos + 1), mp3);
     int counter = 0;
-    for (int i = 0; i < (end_of_file - cur_pos); i++) { // запишем все символы в файл
-        fputc(buf[i], mp3_out);
-        counter += 1;
-    }
+    // for (int i = 0; i < (end_of_file - cur_pos); i++) { // запишем все символы в файл
+    //     fputc(buf[i], mp3_out);
+    //     counter += 1;
+    // }
+    fwrite(buf, sizeof(char), end_of_file - cur_pos, mp3_out);
+    counter += end_of_file - cur_pos;
 
     fclose(mp3); // закроем файлы 
     fclose(mp3_out);
@@ -606,24 +613,15 @@ void get_pic(FILE* mp3, int* counter) {
 
         power = pow(256, 3 - i);
         size += size_buf[i]*power;
-        printf("%d\n", size);
 
     }
-    printf(" 609 Prev size is %d\n", size);
     
     pic = malloc(size*sizeof(char) + sizeof(int) + 100);
     pic->size = size;
     fgetc(mp3);
     fgetc(mp3);
-    printf("Position after header  %d\n", ftell(mp3));
     pic->encoding = fgetc(mp3);
     size -= 1;
-
-    // for (int i = 0; i < 6; i++) {
-    //     size -= 1;
-    // } 
-
-
     int i = 0;
     byte = 1;
     buf[0] = 1;
@@ -650,48 +648,28 @@ void get_pic(FILE* mp3, int* counter) {
     while (byte != '\0') {
 
         byte = fgetc(mp3);
-        printf("Last byte is %d\n", byte);
         size -= 1;
         i++;
 
     }
 
-    printf("Position before picture  %d\n", ftell(mp3));
-    printf("SIZE is %d\n", size);
     char* image_path = calloc(10, sizeof(char));
     strcat(image_path, "image.");
     strcat(image_path, pic->mime);
     FILE* pic_out = fopen(image_path, "wb");
     if (pic_out != NULL) {
-        printf("Opened image\n");
+        printf("Saved image\n");
     }
 
     char* data_buf = malloc(size*sizeof(char));
     if (data_buf != NULL) {
-        printf("YES\n");
     }
     char code = 1;
     for (int i = 0; i < size; i++) {
         code = fgetc(mp3);
         fputc(code, pic_out);
     }
-    // fread(data_buf, sizeof(int), size, mp3);
-    // fwrite(data_buf, sizeof(char), size, pic_out);
-    // pic->data = data_buf;
-    // for (int i = 0; i < size; i++) {
-    //     printf("i is %d    %d \n", i, fgetc(mp3));
-    // }
-    // i = 0;
-    // while (i < size) {
-    //     printf("%d\n", (int)fgetc(mp3));
-    //     i++;
-    // }
-    // printf("%s\n", data_buf);
-    // for (int i = 0; i < size; i++) {
-    //     code = fgetc(mp3);
-    //     printf("%d ", code);
-    //     fputc(code, pic_out);
-    // }
+
     fclose(pic_out);
     *counter += pic->size + 10;
  
