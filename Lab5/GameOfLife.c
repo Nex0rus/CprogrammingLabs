@@ -6,8 +6,8 @@
 
 struct Header { 
     int offset;
-    int height;
-    int width;
+    unsigned int height;
+    unsigned int width;
     int bit_depth;
     char* header;
     char* pixel_bytes;
@@ -69,8 +69,8 @@ struct Header* parse_file(char* file_path) {
         return NULL;
     }
     
-    char* buf = malloc(HEADER_SIZE * sizeof(char));
-    fread(buf, sizeof(char), HEADER_SIZE, file);
+    unsigned char* buf = malloc(HEADER_SIZE * sizeof(unsigned char));
+    fread(buf, sizeof(unsigned char), HEADER_SIZE, file);
     header->header = buf;
     int size = 0;
     if (buf[0] != 'B' && buf[0] != 'M') {
@@ -98,9 +98,9 @@ struct Header* parse_file(char* file_path) {
         header->height += buf[i] * pow(256, i - 22);
     }
     int num_of_bytes = header->height * header->width / 8;
-    char* pixel_bytes = malloc(num_of_bytes);
+    unsigned char* pixel_bytes = malloc(num_of_bytes);
     fseek(file, header->offset, SEEK_SET);
-    fread(pixel_bytes, sizeof(char), num_of_bytes, file);
+    fread(pixel_bytes, sizeof(unsigned char), num_of_bytes, file);
     header->pixel_bytes = pixel_bytes;
 
     return header;
@@ -236,12 +236,8 @@ void game(char* file_path, char*  dir_name, int max_iter, int freq) {
     unsigned char* map;
     unsigned char* next_map = calloc(h * w, sizeof(unsigned char));
     map = set_map(header);
-    // for (int y = 0; y < h; y++) {
-    //     for (int x = 0; x < w; x++) {
-    //         printf("%d ", map[y * w + x]);
-    //     }
-    // }
-    // return;
+    
+
     int generation = 0; 
     int position = 0;
     int changed = 1;
@@ -281,27 +277,10 @@ void game(char* file_path, char*  dir_name, int max_iter, int freq) {
         }
 
         memcpy(map, next_map, h * w);
-
-        // for (int y = 0; y < h; y++) {
-        //     for (int x = 0; x < w; x++) {
-        //         printf("%d ", map[y * w + x]);
-        //     }
-        //     printf("\n");
-        // }
-        // printf("\n\n\n\n\n\n\n");
-
         next_map = calloc(h * w, sizeof(unsigned char));
         if (generation % freq == 0) {
             output(map, h * w, generation, header);
         }
     }
-    // for (int i = 0; i < h; i++) {
-    //     for (int j = 0; j < w; j++) {
-    //         printf("%d", map[i * w + j]);
-    //     }
-    //     printf("\n");
-    // }
-
-
 
 }
