@@ -25,6 +25,12 @@ void display(int height, int width, unsigned char* map);
 void output(unsigned char* map, int map_size, int generation, struct Header* header);
 unsigned char* create(unsigned char* map, int map_height, int map_width);
 unsigned char* add_object(unsigned char* map, char* src, int x, int y, int map_height, int map_width);
+void show_object(char* obj_name);
+
+static void inline print_object_list(void) {
+    printf("======================\n Following objects can be created\n===Stable===\n 1. loaf\n 2. beehive\n 3. block\n 5. boat\n 6. tub\n===Oscillators===\n 1. blinker\n 2. toad\n 3. beacon\n 4. pulsar\n 5. i-column\n===Spaceships===\n 1. glider_left\n 2. glider_right\n 3. light_left\n 4. light_right\n 5. middle_left\n 6. middle_right\n 7. heavy_left\n 8. heavy_right\n======================\n");
+
+}
 
 void input_error(void) {
     printf(
@@ -48,7 +54,7 @@ void restoreConsole(void) {
 
 void display(int height, int width, unsigned char* map) {
     printf("\x1b%d", 7);
-    for (int y = 0; y < height; y++) {
+    for (int y = 0; y < height - 1; y++) {
 
         for (int x = 0; x < width; x++) {
 
@@ -57,16 +63,16 @@ void display(int height, int width, unsigned char* map) {
                 }
 
                 else {
-                    printf(" ");
+                    printf("");
                 }
 
             }
 
             printf("\n");
         }
-
-        Sleep(1);
-        printf("\x1b%d", 8); 
+        printf("\x1b%d", 8);
+        Sleep(2000);
+         
 
 }
 
@@ -278,7 +284,7 @@ void output(unsigned char* map, int map_size, int generation, struct Header* hea
         byte = 0;
 
     }
-    printf("Closing file\n");
+    // printf("Closing file\n");
     fclose(file_out);
     free(filename);
     free(gen);
@@ -383,26 +389,37 @@ void game(char* file_path, char*  dir_name, int max_iter, int freq, int to_displ
 unsigned char* create(unsigned char* map, int map_height, int map_width) {
     char* name;
     memset(name, 0, 20); 
-    // name[20] = '\0';
     int x = 0;
     int y = 0;
     char* src = calloc(30, sizeof(unsigned char));
-    printf("======================\n Following objects can be created\n===Stable===\n 1. loaf\n 2. beehive\n 3. block\n 5. boat\n 6. tub\n===Oscillators===\n 1. blinker\n 2. toad\n 3. beacon\n 4. pulsar\n 5. i-column\n===Spaceships===\n 1. glider_left\n 2. glider_right\n 3. light_left\n 4. light_right\n 5. middle_left\n 6. middle_right\n 7. heavy_left\n 8. heavy_right\n======================\n");
-
+    print_object_list();
     while (1) {
     
         scanf("%s", name);
-        // printf("%s\n", name);
         if (strcmp(name, "done") == 0) {
             return map;
         }
-        scanf("%d%d", &x, &y);
+        
+        if (strcmp(name, "show") == 0) {
+            scanf("%s", name);
+            show_object(name);
+            memset(name, 0, 20);
+            continue;
+        }
+
         strcat(src, "patterns/");
         strcat(src, name);
         strcat(src, ".bmp");
-        // printf("<%s>\n", src);
-        // printf("%s  %d %d\n", name, x, y);
-        // x = map_width - x;
+
+        FILE* src_file;
+        if ((src_file = fopen(src, "rb")) == NULL) {
+            printf("No such pattern in list, please choose existing pattern\n");
+            continue;
+        }
+
+        fclose(src_file);
+
+        scanf("%d%d", &x, &y);
         y = map_height - y;
         add_object(map, src, x, y, map_height, map_width);
         memset(src, 0, 30);
@@ -410,7 +427,10 @@ unsigned char* create(unsigned char* map, int map_height, int map_width) {
 
     }
 
+    free(name);
+    free(src);
     return map;
+
 }
 
 unsigned char* add_object(unsigned char* map, char* src, int x, int y, int map_height, int map_width) {
@@ -432,5 +452,23 @@ unsigned char* add_object(unsigned char* map, char* src, int x, int y, int map_h
 
     free(pattern_map);
     return map;
+
+}
+
+void show_object(char* obj_name) {
+    char* src = calloc(30, sizeof(unsigned char));
+    strcat(src, "patterns/");
+    strcat(src, obj_name);
+    strcat(src, ".bmp");
+    struct Header* header = parse_file(src);
+    unsigned char* obj_map = calloc(header->width * header->height, sizeof(char));
+    obj_map = set_map(header);
+    set_console();
+    display(header->height, header->width, obj_map);
+    Sleep(10);
+    printf("\x1b[2J");
+    restoreConsole();
+    print_object_list();
+
 
 }
