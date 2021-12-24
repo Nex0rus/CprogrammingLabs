@@ -391,9 +391,9 @@ Frame* parse_frame(FILE* mp3, int* counter, char* buf, Frame* frame) { // про
     fread(buf, sizeof(char), 2, mp3); // Пропускаем флаги тэга
     *counter += 2;
 
-    if (tag != 'W') {
+    if (tag != 'W') { // Здесь проверяется что фрейм не содержит ссылку - фреймы ссылок не содержат байт кодировки
         fread(buf, sizeof(char), 1, mp3);
-        if (buf[0] == 1) {
+        if (buf[0] == 1) { // Если кодировка не ASCII пропускаем байты особой кодировки чтобы дойти до текстовой информации
             num_of_symbols -= 3;
             fgetc(mp3);
             fgetc(mp3);
@@ -661,9 +661,6 @@ void get_pic(FILE* mp3, int* counter) {
         printf("Saved image\n");
     }
 
-    char* data_buf = malloc(size*sizeof(char));
-    if (data_buf != NULL) {
-    }
     char code = 1;
     for (int i = 0; i < size; i++) {
         code = fgetc(mp3);
